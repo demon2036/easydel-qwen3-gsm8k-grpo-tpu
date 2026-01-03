@@ -130,6 +130,7 @@ def main() -> None:
     grpo_config = ed.GRPOConfig(
         total_batch_size=args.total_batch_size,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
+        use_data_collactor=False,
         max_prompt_length=args.max_prompt_length,
         max_completion_length=args.max_completion_length,
         learning_rate=args.learning_rate,
