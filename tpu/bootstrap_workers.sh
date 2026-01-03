@@ -43,6 +43,7 @@ for ((w=0; w<worker_count; w++)); do
         source $VENV_DIR/bin/activate; \
         python -m pip install -U pip; \
         python -m pip install -r $REPO_DIR/requirements.txt; \
+        python -m pip install --index-url https://download.pytorch.org/whl/cpu torch; \
         touch $REPO_DIR/.deps_done\" \
         > \"$REPO_DIR/logs/bootstrap_worker${w}.log\" 2>&1 &'"
 done
