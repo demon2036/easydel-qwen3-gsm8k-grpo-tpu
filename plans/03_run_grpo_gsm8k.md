@@ -28,6 +28,12 @@ export ZONE="europe-west4-a"
 export TPU_NAME="your-tpu"
 export REPO_URL="https://github.com/<you>/<repo>.git"
 
+# Optional (if you want W&B online logging):
+# export WANDB_API_KEY=...
+# export WANDB_ENTITY=...
+# Optional (if your model is gated on HF):
+# export HF_TOKEN=...
+
 bash tpu/launch_grpo_multihost.sh
 ```
 

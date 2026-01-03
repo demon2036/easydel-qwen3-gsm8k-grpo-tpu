@@ -41,7 +41,14 @@ for ((w=0; w<worker_count; w++)); do
       fi; \
       test -f \"$REPO_DIR/.deps_done\" || echo \"WARN: deps not bootstrapped; run tpu/bootstrap_workers.sh\"; \
       nohup bash -lc \"export JAX_COORDINATOR_ADDRESS=$coord_addr; export JAX_COORDINATOR_PORT=$COORD_PORT; export JAX_PROCESS_COUNT=$worker_count; export JAX_PROCESS_INDEX=$w; \
-        if [ -n \\\"${WANDB_API_KEY:-}\\\" ]; then export WANDB_MODE=online; else export WANDB_MODE=disabled; fi; \
+        WANDB_ARGS=\\\"\\\"; \
+        if [ -n \\\"${WANDB_API_KEY:-}\\\" ]; then \
+          export WANDB_MODE=online; \
+          WANDB_ARGS=\\\"--use_wandb\\\"; \
+          if [ -n \\\"${WANDB_ENTITY:-}\\\" ]; then WANDB_ARGS=\\\"$WANDB_ARGS --wandb_entity ${WANDB_ENTITY}\\\"; fi; \
+        else \
+          export WANDB_MODE=disabled; \
+        fi; \
         source $VENV_DIR/bin/activate; \
         python -m experiments.qwen3_8b_gsm8k_grpo.train \
           --model_id $MODEL_ID \
@@ -52,7 +59,7 @@ for ((w=0; w<worker_count; w++)); do
           --num_return_sequences 2 \
           --total_batch_size 2 \
           --dp 1 --tp 1 \
-          ${TRAIN_ARGS}\" \
+          ${TRAIN_ARGS} $WANDB_ARGS\" \
         > \"$LOG_DIR/train_worker${w}.log\" 2>&1 &'"
 done
 
