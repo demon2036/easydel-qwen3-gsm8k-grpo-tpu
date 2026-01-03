@@ -132,3 +132,26 @@ gcloud compute tpus tpu-vm ssh ... --command "tail -n 50 ~/log.txt"
 - 根因：eformer 的线性 scheduler 配置要求显式的 `learning_rate_end`。
 - 正确做法：给 `GRPOConfig` 补 `learning_rate_end`（例如 `learning_rate * 0.1`）。
 - 验证方式：`configure Model, Optimizer, Scheduler` 阶段通过，训练开始打 `TrainerMetrics`。
+
+- 正确做法（SOP）：TPU VM 上跑训练必须分成两步：
+  1) `bootstrap`：在 TPU 上 clone repo + 装依赖（Python3.11 + venv + `pip install -r requirements.txt` + CPU torch），后台 `nohup`，产物是 `~/qwen3_grpo/.deps_done` 与 `~/qwen3_grpo/logs/bootstrap_worker0.log`。
+  2) `launch`：再启动训练（后台 `nohup`），产物是 `~/qwen3_grpo/logs/train_worker0.log` 与 `~/qwen3_grpo/outputs/.../run-XX/`。
+  验证方式：`tail -n 200 ~/qwen3_grpo/logs/bootstrap_worker0.log` 看到 `Successfully built easydel` / 无报错；训练日志出现 `TrainerMetrics` 且最终 `Saving checkpoint at step ...`。
+
+- 正确做法（SOP）：所有长任务（pip install / 启动训练）都用 `nohup ... > log 2>&1 &`，并且只用 `tail -n`（不要 `tail -f`）检查进度，避免终端卡住/超时。
+- 验证方式：`pgrep -af experiments.qwen3_8b_gsm8k_grpo.train` 能看到进程；`tail -n 50 train_worker0.log` 持续增长。
+
+- 失败现象：训练日志报 HuggingFace 401/RepositoryNotFound（例如 `Qwen/Qwen3-8B-Instruct` 拉 tokenizer/config 失败）。
+- 根因：模型可能是 gated/private，需要在 TPU VM 上配置 `HF_TOKEN`（环境变量）。
+- 正确做法：**只在 TPU VM 的环境里**设置 `HF_TOKEN`（不要写进仓库/不要写进 AGENTS.md），然后重新启动训练；或者先用公开模型（例如 `Qwen/Qwen2.5-7B-Instruct`）做 smoke test。
+- 验证方式：`python -c "from transformers import AutoTokenizer; AutoTokenizer.from_pretrained('...')"` 在 TPU 上不再 401；训练继续进入 `Converting Model` / `TrainerMetrics`。
+
+- 失败现象：希望打 WandB 但没有 run / 没有任何 wandb 日志。
+- 根因：TPU VM 没有设置 `WANDB_API_KEY`，或脚本没有启用 `use_wandb=True`；同时 EasyDeL 的 project 名由内部自动生成（不是 `wandb_project` 参数）。
+- 正确做法：**只在 TPU VM 的环境里**设置 `WANDB_API_KEY`（以及可选 `WANDB_ENTITY`），启动脚本检测到 key 后自动加 `--use_wandb`；run name 用 `wandb_name`（我们用 run_name 注入）。
+- 验证方式：训练日志不再出现 wandb 初始化异常；wandb 后台出现新 run，并持续上报 `TrainerMetrics`。
+
+- 失败现象：`gcloud compute tpus tpu-vm ssh ... --command "bash -lc '...'"` 里包含花括号/引号时命令被 gcloud 错误解析（例如把 `%s`/`;` 当成 gcloud 参数）。
+- 根因：外层双引号/单引号嵌套不当，导致 `--command` 的字符串被 shell 或 gcloud 提前分词。
+- 正确做法：优先把复杂逻辑放到仓库脚本（如 `tpu/*.sh`），gcloud 只执行 `bash -lc '<simple command>'`；必要时避免在 `--command` 字符串里出现未转义的 `%`、`$()`、`;`。
+- 验证方式：gcloud 不再报 `unrecognized arguments`，且远端脚本确实执行并产生 log。
