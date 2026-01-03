@@ -151,6 +151,13 @@ gcloud compute tpus tpu-vm ssh ... --command "tail -n 50 ~/log.txt"
 - 正确做法：**只在 TPU VM 的环境里**设置 `WANDB_API_KEY`（以及可选 `WANDB_ENTITY`），启动脚本检测到 key 后自动加 `--use_wandb`；run name 用 `wandb_name`（我们用 run_name 注入）。
 - 验证方式：训练日志不再出现 wandb 初始化异常；wandb 后台出现新 run，并持续上报 `TrainerMetrics`。
 
+- 失败现象：模型 ID 直接“拍脑袋”写成 `Qwen/Qwen3-8B-Instruct`，导致 `transformers`/`huggingface_hub` 拉取时报 `401` 或 `not a valid model identifier`。
+- 根因：没有先确认 HF 上的**真实仓库名**；Qwen3 8B 的官方公开模型是 `Qwen/Qwen3-8B`（另有 `Qwen/Qwen3-8B-Base` 等），并不存在（至少公开不可见）`Qwen/Qwen3-8B-Instruct` 这个 id。
+- 正确做法：在写训练脚本/启动参数前，先用 HF API 查证 modelId（比 Google 搜索更稳）：
+  - `curl -s 'https://huggingface.co/api/models?search=Qwen3-8B&limit=20' | head`
+  - 或本地 python：`python -c "import json,urllib.request; print([m['modelId'] for m in json.load(urllib.request.urlopen('https://huggingface.co/api/models?search=Qwen3-8B&limit=20'))][:5])"`
+- 验证方式：TPU VM 上 `python -c "from transformers import AutoTokenizer; AutoTokenizer.from_pretrained('Qwen/Qwen3-8B')"` 成功，不再 401；训练能进入 `Converting Model`/`TrainerMetrics`。
+
 - 失败现象：`gcloud compute tpus tpu-vm ssh ... --command "bash -lc '...'"` 里包含花括号/引号时命令被 gcloud 错误解析（例如把 `%s`/`;` 当成 gcloud 参数）。
 - 根因：外层双引号/单引号嵌套不当，导致 `--command` 的字符串被 shell 或 gcloud 提前分词。
 - 正确做法：优先把复杂逻辑放到仓库脚本（如 `tpu/*.sh`），gcloud 只执行 `bash -lc '<simple command>'`；必要时避免在 `--command` 字符串里出现未转义的 `%`、`$()`、`;`。

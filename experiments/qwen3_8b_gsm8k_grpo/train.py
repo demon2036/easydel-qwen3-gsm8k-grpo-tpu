@@ -22,7 +22,7 @@ def _build_prompt(question: str) -> str:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_id", default="Qwen/Qwen3-8B-Instruct")
+    parser.add_argument("--model_id", default="Qwen/Qwen3-8B")
     parser.add_argument("--dataset_id", default="openai/gsm8k")
     parser.add_argument("--dataset_config", default="main")
     parser.add_argument("--train_split", default="train")

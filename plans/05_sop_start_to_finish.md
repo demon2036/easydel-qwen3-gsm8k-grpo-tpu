@@ -62,8 +62,8 @@ gcloud compute tpus tpu-vm ssh "$TPU_NAME" --zone "$ZONE" --worker=0 --command "
 
 ```bash
 cd /tmp/qwen3_grpo_local
-export MODEL_ID="Qwen/Qwen3-8B-Instruct"   # requires HF_TOKEN if gated
-# If you want a public smoke test first:
+export MODEL_ID="Qwen/Qwen3-8B"
+# If you want a smaller/public smoke test first:
 # export MODEL_ID="Qwen/Qwen2.5-7B-Instruct"
 bash tpu/launch_grpo_multihost.sh
 ```
