@@ -158,6 +158,11 @@ gcloud compute tpus tpu-vm ssh ... --command "tail -n 50 ~/log.txt"
   - 或本地 python：`python -c "import json,urllib.request; print([m['modelId'] for m in json.load(urllib.request.urlopen('https://huggingface.co/api/models?search=Qwen3-8B&limit=20'))][:5])"`
 - 验证方式：TPU VM 上 `python -c "from transformers import AutoTokenizer; AutoTokenizer.from_pretrained('Qwen/Qwen3-8B')"` 成功，不再 401；训练能进入 `Converting Model`/`TrainerMetrics`。
 
+- 失败现象：为了“自动化”，把 `HF_TOKEN`/`WANDB_API_KEY` 直接写进脚本、命令行、仓库文件，导致凭据在 git history、终端记录、CI 日志里泄露风险极高。
+- 根因：没有区分“可复制 SOP”与“敏感配置”；且 `gcloud ... --command "<包含 token 的字符串>"` 往往会出现在本机 shell history / 日志 / 工具调用记录中。
+- 正确做法：token **只放在 TPU VM 的环境变量/配置文件中**（例如 `~/.bashrc` 或 `wandb login`/`hf auth login`），仓库只写占位符和验证命令；启动脚本通过检测 `WANDB_API_KEY`/`HF_TOKEN` 是否存在来决定是否启用对应功能。
+- 验证方式：`env | rg 'HF_TOKEN|WANDB_API_KEY'` 在 TPU 上可见，但仓库 `git grep -n 'hf_|wandb|token'` 不包含真实 token；W&B 正常出现 run、HF 可拉取模型。
+
 - 失败现象：`gcloud compute tpus tpu-vm ssh ... --command "bash -lc '...'"` 里包含花括号/引号时命令被 gcloud 错误解析（例如把 `%s`/`;` 当成 gcloud 参数）。
 - 根因：外层双引号/单引号嵌套不当，导致 `--command` 的字符串被 shell 或 gcloud 提前分词。
 - 正确做法：优先把复杂逻辑放到仓库脚本（如 `tpu/*.sh`），gcloud 只执行 `bash -lc '<simple command>'`；必要时避免在 `--command` 字符串里出现未转义的 `%`、`$()`、`;`。

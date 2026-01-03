@@ -58,6 +58,8 @@ for ((w=0; w<worker_count; w++)); do
           --max_completion_length 128 \
           --num_return_sequences 2 \
           --total_batch_size 2 \
+          --log_steps 1 \
+          --report_steps 1 \
           --dp 1 --tp 1 \
           ${TRAIN_ARGS} $WANDB_ARGS\" \
         > \"$LOG_DIR/train_worker${w}.log\" 2>&1 &'"

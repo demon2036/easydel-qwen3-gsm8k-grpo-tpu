@@ -37,6 +37,9 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--learning_rate", type=float, default=1e-6)
     parser.add_argument("--learning_rate_end", type=float, default=0.0)
     parser.add_argument("--num_train_epochs", type=int, default=1)
+    parser.add_argument("--log_steps", type=int, default=5)
+    parser.add_argument("--report_steps", type=int, default=10)
+    parser.add_argument("--save_steps", type=int, default=500)
     parser.add_argument("--beta", type=float, default=0.04)
     parser.add_argument("--temperature", type=float, default=0.7)
     parser.add_argument("--top_p", type=float, default=0.95)
@@ -141,9 +144,9 @@ def main() -> None:
         optimizer=ed.EasyDeLOptimizers.ADAMW,
         scheduler=ed.EasyDeLSchedulers.LINEAR,
         save_directory=save_directory,
-        save_steps=500,
-        report_steps=10,
-        log_steps=5,
+        save_steps=args.save_steps,
+        report_steps=args.report_steps,
+        log_steps=args.log_steps,
         progress_bar_type="json",
         beta=args.beta,
         num_return_sequences=args.num_return_sequences,
