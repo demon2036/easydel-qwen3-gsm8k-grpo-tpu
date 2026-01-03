@@ -33,6 +33,7 @@ for ((w=0; w<worker_count; w++)); do
       fi; \
       mkdir -p \"$REPO_DIR/logs\"; \
       nohup bash -lc \"set -euo pipefail; \
+        (source ~/.bash_profile 2>/dev/null || true); (source ~/.profile 2>/dev/null || true); (source ~/.bashrc 2>/dev/null || true); \
         if command -v apt-get >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then \
           sudo apt-get update; \
           sudo apt-get install -y python3-venv; \

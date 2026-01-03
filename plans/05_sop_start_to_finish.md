@@ -46,7 +46,10 @@ gcloud compute tpus tpu-vm ssh "$TPU_NAME" --zone "$ZONE" --worker=0 \
 
 ## 3) (Optional) Enable HF + W&B (on TPU worker0)
 
-If you want W&B online logging and the model/dataset requires auth, set tokens **on the TPU VM** (do not commit them).
+If you want W&B online logging and the model/dataset requires auth, set tokens **on the TPU VM** (do not commit them). Prefer interactive logins so tokens do not land in shell history:
+
+- `wandb login --relogin`
+- `huggingface-cli login`
 
 ```bash
 gcloud compute tpus tpu-vm ssh "$TPU_NAME" --zone "$ZONE" --worker=0 --command "bash -lc '

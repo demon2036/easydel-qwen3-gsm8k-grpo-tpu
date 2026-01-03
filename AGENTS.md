@@ -163,6 +163,11 @@ gcloud compute tpus tpu-vm ssh ... --command "tail -n 50 ~/log.txt"
 - 正确做法：token **只放在 TPU VM 的环境变量/配置文件中**（例如 `~/.bashrc` 或 `wandb login`/`hf auth login`），仓库只写占位符和验证命令；启动脚本通过检测 `WANDB_API_KEY`/`HF_TOKEN` 是否存在来决定是否启用对应功能。
 - 验证方式：`env | rg 'HF_TOKEN|WANDB_API_KEY'` 在 TPU 上可见，但仓库 `git grep -n 'hf_|wandb|token'` 不包含真实 token；W&B 正常出现 run、HF 可拉取模型。
 
+- 失败现象：即使用户声明 token “用完就换”，也把 token 直接出现在 agent 的工具调用（`gcloud ... --command ...`）或聊天内容里。
+- 根因：工具调用参数/日志会被系统记录，可被回放；“短期 token”依然属于敏感信息。
+- 正确做法：让用户在 TPU VM 上用交互方式登录（`wandb login --relogin` / `huggingface-cli login`），或在 TPU 上本地写入环境变量文件，然后脚本只负责读取环境（我们已在 `tpu/*.sh` 里 `source ~/.bashrc`/`~/.profile`）。
+- 验证方式：仓库与工具调用中不出现明文 token；W&B/HF 认证生效且训练 run 正常。
+
 - 失败现象：为了下载/预取模型，在 `gcloud ... --command` 里直接塞复杂的 `python -c "..."`，经常因为引号嵌套导致远端脚本语法错误（例如 `SyntaxError: invalid decimal literal`）。
 - 根因：`gcloud --command` + `bash -lc` + `nohup` 的多层引号很容易被本地 shell/远端 shell分词。
 - 正确做法：尽量把复杂逻辑下沉到仓库脚本；如果必须用 `python -c`，采用稳妥的引号嵌套模式：

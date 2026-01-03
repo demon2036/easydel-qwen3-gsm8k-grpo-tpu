@@ -41,6 +41,7 @@ for ((w=0; w<worker_count; w++)); do
       fi; \
       test -f \"$REPO_DIR/.deps_done\" || echo \"WARN: deps not bootstrapped; run tpu/bootstrap_workers.sh\"; \
       nohup bash -lc \"export JAX_COORDINATOR_ADDRESS=$coord_addr; export JAX_COORDINATOR_PORT=$COORD_PORT; export JAX_PROCESS_COUNT=$worker_count; export JAX_PROCESS_INDEX=$w; \
+        (source ~/.bash_profile 2>/dev/null || true); (source ~/.profile 2>/dev/null || true); (source ~/.bashrc 2>/dev/null || true); \
         WANDB_ARGS=\\\"\\\"; \
         if [ -n \\\"\\${WANDB_API_KEY:-}\\\" ]; then \
           export WANDB_MODE=online; \
