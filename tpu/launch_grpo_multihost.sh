@@ -9,6 +9,7 @@ REPO_DIR="${REPO_DIR:-$HOME/qwen3_grpo}"
 VENV_DIR="${VENV_DIR:-$HOME/venv-qwen3-grpo}"
 LOG_DIR="${LOG_DIR:-$REPO_DIR/logs}"
 COORD_PORT="${COORD_PORT:-8476}"
+TRAIN_ARGS="${TRAIN_ARGS:-}"
 
 worker_ips_raw="$(
   gcloud compute tpus tpu-vm describe "$TPU_NAME" --zone "$ZONE" \
@@ -34,17 +35,20 @@ for ((w=0; w<worker_count; w++)); do
       if [ ! -d \"$REPO_DIR/.git\" ]; then git clone \"$REPO_URL\" \"$REPO_DIR\"; else cd \"$REPO_DIR\" && git fetch && git reset --hard origin/main; fi; \
       test -f \"$REPO_DIR/.deps_done\" || echo \"WARN: deps not bootstrapped; run tpu/bootstrap_workers.sh\"; \
       nohup bash -lc \"export JAX_COORDINATOR_ADDRESS=$coord_addr; export JAX_COORDINATOR_PORT=$COORD_PORT; export JAX_PROCESS_COUNT=$worker_count; export JAX_PROCESS_INDEX=$w; \
+        if [ -n \\\"${WANDB_API_KEY:-}\\\" ]; then export WANDB_MODE=online; else export WANDB_MODE=disabled; fi; \
         source $VENV_DIR/bin/activate; \
         python -m experiments.qwen3_8b_gsm8k_grpo.train \
           --model_id Qwen/Qwen3-8B-Instruct \
-          --max_prompt_length 1024 \
-          --max_completion_length 512 \
-          --num_return_sequences 4 \
-          --total_batch_size 8 \
-          --dp 1 --tp 1\" \
+          --max_train_samples 64 \
+          --max_eval_samples 64 \
+          --max_prompt_length 256 \
+          --max_completion_length 128 \
+          --num_return_sequences 2 \
+          --total_batch_size 2 \
+          --dp 1 --tp 1 \
+          ${TRAIN_ARGS}\" \
         > \"$LOG_DIR/train_worker${w}.log\" 2>&1 &'"
 done
 
 echo "Training started. Tail example:"
 echo "gcloud compute tpus tpu-vm ssh \"$TPU_NAME\" --zone \"$ZONE\" --worker=0 --command \"tail -n 200 $LOG_DIR/train_worker0.log\""
-

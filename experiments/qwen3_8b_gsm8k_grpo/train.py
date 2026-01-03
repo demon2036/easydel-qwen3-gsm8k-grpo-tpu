@@ -26,6 +26,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset_config", default="main")
     parser.add_argument("--train_split", default="train")
     parser.add_argument("--eval_split", default="test")
+    parser.add_argument("--max_train_samples", type=int, default=0)
+    parser.add_argument("--max_eval_samples", type=int, default=0)
     parser.add_argument("--max_prompt_length", type=int, default=1024)
     parser.add_argument("--max_completion_length", type=int, default=512)
     parser.add_argument("--num_return_sequences", type=int, default=4)
@@ -74,6 +76,11 @@ def main() -> None:
 
     raw_train = load_dataset(args.dataset_id, args.dataset_config, split=args.train_split)
     raw_eval = load_dataset(args.dataset_id, args.dataset_config, split=args.eval_split)
+
+    if args.max_train_samples and hasattr(raw_train, "select"):
+        raw_train = raw_train.select(range(min(args.max_train_samples, len(raw_train))))
+    if args.max_eval_samples and hasattr(raw_eval, "select"):
+        raw_eval = raw_eval.select(range(min(args.max_eval_samples, len(raw_eval))))
 
     def preprocess(example: dict[str, tp.Any]) -> dict[str, tp.Any]:
         gold = parse_gsm8k_gold(example.get("answer", ""))
@@ -162,4 +169,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
