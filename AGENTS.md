@@ -197,3 +197,8 @@ gcloud compute tpus tpu-vm ssh ... --command "tail -n 50 ~/log.txt"
 - ✅ 正确：先用小规模 smoke（样本数/长度/return seq 都小）验证能进入 `TrainerMetrics` 和能保存 checkpoint，再逐步放大。
 - ❌ 错误：把 token 直接写入仓库/脚本/`gcloud --command` 参数里；即使“临时 token”，也会进入命令记录与回放日志。
 - ❌ 错误：在 `gcloud ssh --command` 里写多行复杂逻辑（heredoc / 大段 python），容易被引号解析破坏导致不可重复。
+
+- 失败现象：`tpu/launch_grpo_multihost.sh` 启动时本地直接报 `WANDB_ARGS: unbound variable`，训练根本没在 TPU 上启动。
+- 根因：外层脚本 `set -u`，但 `gcloud --command "<双引号字符串>"` 里包含 `$WANDB_ARGS`，导致 **本地 shell** 在构造命令时尝试展开未定义变量（而不是留给 TPU 远端展开）。
+- 正确做法：避免在 `--command` 内拼复杂字符串/变量；把远端训练逻辑下沉到 TPU 端脚本 `tpu/remote_train_worker.sh`，`--command` 只负责设置少量 env + `nohup bash ... &` 调用该脚本。
+- 验证方式：本地执行 `bash tpu/launch_grpo_multihost.sh` 能返回 `Training started...`；TPU 上 `~/qwen3_grpo/logs/train_worker0.log` 持续增长并出现 `Loading checkpoint shards`/`TrainerMetrics`。
