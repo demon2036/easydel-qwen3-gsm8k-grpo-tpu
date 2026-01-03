@@ -46,20 +46,27 @@ gcloud compute tpus tpu-vm ssh "$TPU_NAME" --zone "$ZONE" --worker=0 \
 
 ## 3) (Optional) Enable HF + W&B (on TPU worker0)
 
-If you want W&B online logging and the model/dataset requires auth, set tokens **on the TPU VM** (do not commit them). Prefer interactive logins so tokens do not land in shell history:
+If you want W&B **online** logging and/or the model/dataset requires auth, set tokens **on the TPU VM** (do not commit them). Prefer interactive logins so tokens do not land in shell history or command logs:
 
 - `wandb login --relogin`
 - `huggingface-cli login`
 
+Run an interactive SSH (recommended for secrets):
+
 ```bash
-gcloud compute tpus tpu-vm ssh "$TPU_NAME" --zone "$ZONE" --worker=0 --command "bash -lc '
-  echo \"export HF_TOKEN=...\" >> ~/.bashrc
-  echo \"export WANDB_API_KEY=...\" >> ~/.bashrc
-  echo \"export WANDB_ENTITY=...\" >> ~/.bashrc
-  echo \"export WANDB_PROJECT=qwen3-gsm8k-grpo\" >> ~/.bashrc
-  source ~/.bashrc
-'"
+gcloud compute tpus tpu-vm ssh "$TPU_NAME" --zone "$ZONE" --worker=0
 ```
+
+Then on the TPU VM:
+
+```bash
+source ~/venv-qwen3-grpo/bin/activate
+wandb login --relogin
+huggingface-cli login
+```
+
+Notes:
+- If `WANDB_API_KEY` is not set, this repo defaults to `WANDB_MODE=offline` but still records runs locally under `~/qwen3_grpo/wandb/` so you can later `wandb sync`.
 
 ## 4) Launch GRPO training (background)
 

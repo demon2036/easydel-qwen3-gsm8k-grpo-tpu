@@ -184,3 +184,16 @@ gcloud compute tpus tpu-vm ssh ... --command "tail -n 50 ~/log.txt"
 - 根因：外层双引号/单引号嵌套不当，导致 `--command` 的字符串被 shell 或 gcloud 提前分词。
 - 正确做法：优先把复杂逻辑放到仓库脚本（如 `tpu/*.sh`），gcloud 只执行 `bash -lc '<simple command>'`；必要时避免在 `--command` 字符串里出现未转义的 `%`、`$()`、`;`。
 - 验证方式：gcloud 不再报 `unrecognized arguments`，且远端脚本确实执行并产生 log。
+
+- 失败现象：在 `gcloud ... --command` 中尝试用 heredoc（`python - <<'PY' ... PY`）做小检查，远端经常报 `here-document delimited by end-of-file` / `syntax error near unexpected token`。
+- 根因：`--command` 的字符串在本地 shell + gcloud + 远端 shell 多层解析后，换行/引号很容易被破坏，导致 heredoc 无法正确闭合。
+- 正确做法：对“检查/探测”类命令优先用纯 shell（`test -s file`、`printenv`）或单行 `python -c`；复杂逻辑一律下沉到仓库脚本再 `nohup` 执行。
+- 验证方式：远端命令稳定返回（退出码 0），且不会出现 heredoc/引号相关错误。
+
+## SOP（交付导向，TPU 上跑通）
+
+- ✅ 正确：所有长任务一律 `nohup ... > log 2>&1 &`，然后用 `tail -n 200 log` 观察；脚本放在仓库 `tpu/*.sh`，`gcloud --command` 只跑“很短的入口命令”。
+- ✅ 正确：凭据（HF/W&B token）只在 TPU VM 本地通过交互登录或本地环境配置，不出现在仓库、命令行、tool logs、shell history。
+- ✅ 正确：先用小规模 smoke（样本数/长度/return seq 都小）验证能进入 `TrainerMetrics` 和能保存 checkpoint，再逐步放大。
+- ❌ 错误：把 token 直接写入仓库/脚本/`gcloud --command` 参数里；即使“临时 token”，也会进入命令记录与回放日志。
+- ❌ 错误：在 `gcloud ssh --command` 里写多行复杂逻辑（heredoc / 大段 python），容易被引号解析破坏导致不可重复。

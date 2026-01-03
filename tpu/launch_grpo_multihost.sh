@@ -48,7 +48,9 @@ for ((w=0; w<worker_count; w++)); do
           WANDB_ARGS=\\\"--use_wandb\\\"; \
           if [ -n \\\"\\${WANDB_ENTITY:-}\\\" ]; then WANDB_ARGS=\\\"$WANDB_ARGS --wandb_entity \\${WANDB_ENTITY}\\\"; fi; \
         else \
-          export WANDB_MODE=disabled; \
+          export WANDB_MODE=offline; \
+          export WANDB_DIR=\\\"$REPO_DIR/wandb\\\"; \
+          WANDB_ARGS=\\\"--use_wandb\\\"; \
         fi; \
         source $VENV_DIR/bin/activate; \
         python -m experiments.qwen3_8b_gsm8k_grpo.train \
