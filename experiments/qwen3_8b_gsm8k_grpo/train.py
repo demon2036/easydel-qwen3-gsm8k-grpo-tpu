@@ -45,7 +45,6 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--save_dir", default=os.path.expanduser("~/qwen3_grpo/outputs"))
     parser.add_argument("--run_name", default=None)
     parser.add_argument("--use_wandb", action="store_true")
-    parser.add_argument("--wandb_project", default="qwen3-gsm8k-grpo")
     parser.add_argument("--wandb_entity", default=None)
     return parser.parse_args()
 
@@ -148,8 +147,8 @@ def main() -> None:
         top_p=args.top_p,
         top_k=args.top_k,
         use_wandb=args.use_wandb,
-        wandb_project=args.wandb_project if args.use_wandb else None,
         wandb_entity=args.wandb_entity if args.use_wandb else None,
+        wandb_name=run_name if args.use_wandb else None,
         track_memory=False,
         do_last_save=True,
         save_optimizer_state=False,
