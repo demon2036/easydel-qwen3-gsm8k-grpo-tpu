@@ -41,31 +41,9 @@ for ((w=0; w<worker_count; w++)); do
       fi; \
       test -f \"$REPO_DIR/.deps_done\" || echo \"WARN: deps not bootstrapped; run tpu/bootstrap_workers.sh\"; \
       nohup bash -lc \"export JAX_COORDINATOR_ADDRESS=$coord_addr; export JAX_COORDINATOR_PORT=$COORD_PORT; export JAX_PROCESS_COUNT=$worker_count; export JAX_PROCESS_INDEX=$w; \
-        (source ~/.bash_profile 2>/dev/null || true); (source ~/.profile 2>/dev/null || true); (source ~/.bashrc 2>/dev/null || true); \
-        WANDB_ARGS=\\\"\\\"; \
-        if [ -n \\\"\\${WANDB_API_KEY:-}\\\" ]; then \
-          export WANDB_MODE=online; \
-          WANDB_ARGS=\\\"--use_wandb\\\"; \
-          if [ -n \\\"\\${WANDB_ENTITY:-}\\\" ]; then WANDB_ARGS=\\\"\\$WANDB_ARGS --wandb_entity \\${WANDB_ENTITY}\\\"; fi; \
-        else \
-          export WANDB_MODE=offline; \
-          export WANDB_DIR=\\\"$REPO_DIR/wandb\\\"; \
-          WANDB_ARGS=\\\"--use_wandb\\\"; \
-        fi; \
-        source $VENV_DIR/bin/activate; \
-        python -m experiments.qwen3_8b_gsm8k_grpo.train \
-          --model_id $MODEL_ID \
-          --max_train_samples 64 \
-          --max_eval_samples 64 \
-          --max_prompt_length 256 \
-          --max_completion_length 128 \
-          --num_return_sequences 2 \
-          --total_batch_size 2 \
-          --log_steps 1 \
-          --report_steps 1 \
-          --dp 1 --tp 1 \
-          ${TRAIN_ARGS} \\$WANDB_ARGS\" \
-        > \"$LOG_DIR/train_worker${w}.log\" 2>&1 &'"
+        export REPO_DIR=\\\"$REPO_DIR\\\"; export VENV_DIR=\\\"$VENV_DIR\\\"; export MODEL_ID=\\\"$MODEL_ID\\\"; export TRAIN_ARGS=\\\"$TRAIN_ARGS\\\"; \
+        bash \\\"$REPO_DIR/tpu/remote_train_worker.sh\\\" \
+        > \\\"$LOG_DIR/train_worker${w}.log\\\" 2>&1 &\" >/dev/null 2>&1 &'"
 done
 
 echo "Training started. Tail example:"
