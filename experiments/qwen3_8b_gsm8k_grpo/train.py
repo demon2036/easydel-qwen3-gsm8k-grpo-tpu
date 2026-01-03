@@ -133,6 +133,8 @@ def main() -> None:
     )
 
     grpo_config = ed.GRPOConfig(
+        trainer_prefix="grpo",
+        model_name="qwen3_8b_gsm8k_grpo",
         total_batch_size=args.total_batch_size,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         use_data_collactor=False,

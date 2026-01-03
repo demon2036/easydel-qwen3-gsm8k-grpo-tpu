@@ -163,6 +163,18 @@ gcloud compute tpus tpu-vm ssh ... --command "tail -n 50 ~/log.txt"
 - 正确做法：token **只放在 TPU VM 的环境变量/配置文件中**（例如 `~/.bashrc` 或 `wandb login`/`hf auth login`），仓库只写占位符和验证命令；启动脚本通过检测 `WANDB_API_KEY`/`HF_TOKEN` 是否存在来决定是否启用对应功能。
 - 验证方式：`env | rg 'HF_TOKEN|WANDB_API_KEY'` 在 TPU 上可见，但仓库 `git grep -n 'hf_|wandb|token'` 不包含真实 token；W&B 正常出现 run、HF 可拉取模型。
 
+- 失败现象：为了下载/预取模型，在 `gcloud ... --command` 里直接塞复杂的 `python -c "..."`，经常因为引号嵌套导致远端脚本语法错误（例如 `SyntaxError: invalid decimal literal`）。
+- 根因：`gcloud --command` + `bash -lc` + `nohup` 的多层引号很容易被本地 shell/远端 shell分词。
+- 正确做法：尽量把复杂逻辑下沉到仓库脚本；如果必须用 `python -c`，采用稳妥的引号嵌套模式：
+  - 外层 `--command 'bash -lc \"...\"'`
+  - 内层 `python -c '\'' ... '\''`（用 `'\''` 包住 python 代码，python 代码里用 `\"` 只包字符串）
+- 验证方式：远端 log 不再出现 python 语法错误，并能看到 `Fetching ... files` + `done`。
+
+- 正确做法（W&B）：EasyDeL 的 W&B `project` 名由 `trainer_prefix` + `model_name` 决定（不是 `WANDB_PROJECT`），建议在 `GRPOConfig` 里显式设置：
+  - `trainer_prefix="grpo"`
+  - `model_name="qwen3_8b_gsm8k_grpo"`
+- 验证方式：wandb 上出现 project 名类似 `EasyDeL-grpo-qwen3_8b_gsm8k_grpo`，run name 为 `wandb_name`（我们用 timestamp run_name）。
+
 - 失败现象：`gcloud compute tpus tpu-vm ssh ... --command "bash -lc '...'"` 里包含花括号/引号时命令被 gcloud 错误解析（例如把 `%s`/`;` 当成 gcloud 参数）。
 - 根因：外层双引号/单引号嵌套不当，导致 `--command` 的字符串被 shell 或 gcloud 提前分词。
 - 正确做法：优先把复杂逻辑放到仓库脚本（如 `tpu/*.sh`），gcloud 只执行 `bash -lc '<simple command>'`；必要时避免在 `--command` 字符串里出现未转义的 `%`、`$()`、`;`。
