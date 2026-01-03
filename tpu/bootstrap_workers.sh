@@ -10,7 +10,7 @@ VENV_DIR="${VENV_DIR:-$HOME/venv-qwen3-grpo}"
 
 worker_ips_raw="$(
   gcloud compute tpus tpu-vm describe "$TPU_NAME" --zone "$ZONE" \
-    --format="value(networkEndpoints[].ipAddress)" 2>/dev/null || true
+    --format="value(networkEndpoints.ipAddress)" 2>/dev/null || true
 )"
 
 if [[ -z "${worker_ips_raw}" ]]; then
@@ -31,4 +31,3 @@ done
 
 echo "Bootstrap started. Tail example:"
 echo "gcloud compute tpus tpu-vm ssh \"$TPU_NAME\" --zone \"$ZONE\" --worker=0 --command \"tail -n 200 $REPO_DIR/logs/bootstrap_worker0.log\""
-

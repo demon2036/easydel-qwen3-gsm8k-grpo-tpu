@@ -13,7 +13,7 @@ TRAIN_ARGS="${TRAIN_ARGS:-}"
 
 worker_ips_raw="$(
   gcloud compute tpus tpu-vm describe "$TPU_NAME" --zone "$ZONE" \
-    --format="value(networkEndpoints[].ipAddress)" 2>/dev/null || true
+    --format="value(networkEndpoints.ipAddress)" 2>/dev/null || true
 )"
 
 if [[ -z "${worker_ips_raw}" ]]; then
