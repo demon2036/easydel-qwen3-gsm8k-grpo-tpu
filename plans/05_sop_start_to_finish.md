@@ -52,6 +52,7 @@ If you want W&B online logging and the model/dataset requires auth, set tokens *
 gcloud compute tpus tpu-vm ssh "$TPU_NAME" --zone "$ZONE" --worker=0 --command "bash -lc '
   echo \"export HF_TOKEN=...\" >> ~/.bashrc
   echo \"export WANDB_API_KEY=...\" >> ~/.bashrc
+  echo \"export WANDB_ENTITY=...\" >> ~/.bashrc
   echo \"export WANDB_PROJECT=qwen3-gsm8k-grpo\" >> ~/.bashrc
   source ~/.bashrc
 '"
