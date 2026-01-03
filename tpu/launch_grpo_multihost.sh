@@ -46,7 +46,7 @@ for ((w=0; w<worker_count; w++)); do
         if [ -n \\\"\\${WANDB_API_KEY:-}\\\" ]; then \
           export WANDB_MODE=online; \
           WANDB_ARGS=\\\"--use_wandb\\\"; \
-          if [ -n \\\"\\${WANDB_ENTITY:-}\\\" ]; then WANDB_ARGS=\\\"$WANDB_ARGS --wandb_entity \\${WANDB_ENTITY}\\\"; fi; \
+          if [ -n \\\"\\${WANDB_ENTITY:-}\\\" ]; then WANDB_ARGS=\\\"\\$WANDB_ARGS --wandb_entity \\${WANDB_ENTITY}\\\"; fi; \
         else \
           export WANDB_MODE=offline; \
           export WANDB_DIR=\\\"$REPO_DIR/wandb\\\"; \
