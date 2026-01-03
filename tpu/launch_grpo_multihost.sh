@@ -20,7 +20,7 @@ if [[ -z "${worker_ips_raw}" ]]; then
   worker_count=1
   coord_addr="127.0.0.1"
 else
-  mapfile -t worker_ips < <(printf "%s" "$worker_ips_raw" | tr ';' '\n' | sed '/^$/d')
+  mapfile -t worker_ips < <(printf "%s\n" "$worker_ips_raw" | tr ';' '\n' | sed '/^$/d')
   worker_count="${#worker_ips[@]}"
   coord_addr="${worker_ips[0]}"
 fi

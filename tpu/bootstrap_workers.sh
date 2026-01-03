@@ -16,7 +16,7 @@ worker_ips_raw="$(
 if [[ -z "${worker_ips_raw}" ]]; then
   worker_count=1
 else
-  worker_count="$(printf "%s" "$worker_ips_raw" | tr ';' '\n' | sed '/^$/d' | wc -l | tr -d ' ')"
+  worker_count="$(printf "%s\n" "$worker_ips_raw" | tr ';' '\n' | sed '/^$/d' | wc -l | tr -d ' ')"
 fi
 
 echo "TPU_NAME=$TPU_NAME ZONE=$ZONE worker_count=$worker_count"
