@@ -7,6 +7,7 @@ set -Eeuo pipefail
 
 REPO_DIR="${REPO_DIR:-$HOME/qwen3_grpo}"
 VENV_DIR="${VENV_DIR:-$HOME/venv-qwen3-grpo}"
+PYTHON_BIN="${PYTHON_BIN:-python3.11}"
 
 worker_ips_raw="$(
   gcloud compute tpus tpu-vm describe "$TPU_NAME" --zone "$ZONE" \
@@ -31,8 +32,18 @@ for ((w=0; w<worker_count; w++)); do
         cd \"$REPO_DIR\" && git fetch && git reset --hard origin/main; \
       fi; \
       mkdir -p \"$REPO_DIR/logs\"; \
-      nohup bash -lc \"(command -v apt-get >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1 && sudo apt-get update && sudo apt-get install -y python3-venv) || true; \
-        python3 -m venv $VENV_DIR && source $VENV_DIR/bin/activate && python -m pip install -U pip && python -m pip install -r $REPO_DIR/requirements.txt && touch $REPO_DIR/.deps_done\" \
+      nohup bash -lc \"set -euo pipefail; \
+        if command -v apt-get >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then \
+          sudo apt-get update; \
+          sudo apt-get install -y python3-venv; \
+          if ! command -v $PYTHON_BIN >/dev/null 2>&1; then sudo apt-get install -y python3.11 python3.11-venv; fi; \
+        fi; \
+        rm -rf $VENV_DIR; \
+        $PYTHON_BIN -m venv $VENV_DIR; \
+        source $VENV_DIR/bin/activate; \
+        python -m pip install -U pip; \
+        python -m pip install -r $REPO_DIR/requirements.txt; \
+        touch $REPO_DIR/.deps_done\" \
         > \"$REPO_DIR/logs/bootstrap_worker${w}.log\" 2>&1 &'"
 done
 
