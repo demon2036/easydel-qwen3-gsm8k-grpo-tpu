@@ -32,7 +32,12 @@ for ((w=0; w<worker_count; w++)); do
   echo "→ launch worker=$w"
   gcloud compute tpus tpu-vm ssh "$TPU_NAME" --zone "$ZONE" --worker="$w" --command \
     "bash -lc 'set -euo pipefail; mkdir -p \"$LOG_DIR\"; \
-      if [ ! -d \"$REPO_DIR/.git\" ]; then git clone \"$REPO_URL\" \"$REPO_DIR\"; else cd \"$REPO_DIR\" && git fetch && git reset --hard origin/main; fi; \
+      if [ ! -d \"$REPO_DIR/.git\" ]; then \
+        if [ -e \"$REPO_DIR\" ]; then mv \"$REPO_DIR\" \"${REPO_DIR}.bak.$(date +%s)\"; fi; \
+        git clone \"$REPO_URL\" \"$REPO_DIR\"; \
+      else \
+        cd \"$REPO_DIR\" && git fetch && git reset --hard origin/main; \
+      fi; \
       test -f \"$REPO_DIR/.deps_done\" || echo \"WARN: deps not bootstrapped; run tpu/bootstrap_workers.sh\"; \
       nohup bash -lc \"export JAX_COORDINATOR_ADDRESS=$coord_addr; export JAX_COORDINATOR_PORT=$COORD_PORT; export JAX_PROCESS_COUNT=$worker_count; export JAX_PROCESS_INDEX=$w; \
         if [ -n \\\"${WANDB_API_KEY:-}\\\" ]; then export WANDB_MODE=online; else export WANDB_MODE=disabled; fi; \

@@ -23,8 +23,14 @@ echo "TPU_NAME=$TPU_NAME ZONE=$ZONE worker_count=$worker_count"
 for ((w=0; w<worker_count; w++)); do
   echo "→ bootstrap worker=$w"
   gcloud compute tpus tpu-vm ssh "$TPU_NAME" --zone "$ZONE" --worker="$w" --command \
-    "bash -lc 'set -euo pipefail; mkdir -p \"$REPO_DIR/logs\"; \
-      if [ ! -d \"$REPO_DIR/.git\" ]; then git clone \"$REPO_URL\" \"$REPO_DIR\"; else cd \"$REPO_DIR\" && git fetch && git reset --hard origin/main; fi; \
+    "bash -lc 'set -euo pipefail; \
+      if [ ! -d \"$REPO_DIR/.git\" ]; then \
+        if [ -e \"$REPO_DIR\" ]; then mv \"$REPO_DIR\" \"${REPO_DIR}.bak.$(date +%s)\"; fi; \
+        git clone \"$REPO_URL\" \"$REPO_DIR\"; \
+      else \
+        cd \"$REPO_DIR\" && git fetch && git reset --hard origin/main; \
+      fi; \
+      mkdir -p \"$REPO_DIR/logs\"; \
       nohup bash -lc \"python3 -m venv $VENV_DIR && source $VENV_DIR/bin/activate && python -m pip install -U pip && python -m pip install -r $REPO_DIR/requirements.txt && touch $REPO_DIR/.deps_done\" \
         > \"$REPO_DIR/logs/bootstrap_worker${w}.log\" 2>&1 &'"
 done
