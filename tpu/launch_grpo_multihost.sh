@@ -10,6 +10,7 @@ VENV_DIR="${VENV_DIR:-$HOME/venv-qwen3-grpo}"
 LOG_DIR="${LOG_DIR:-$REPO_DIR/logs}"
 COORD_PORT="${COORD_PORT:-8476}"
 TRAIN_ARGS="${TRAIN_ARGS:-}"
+MODEL_ID="${MODEL_ID:-Qwen/Qwen3-8B-Instruct}"
 
 worker_ips_raw="$(
   gcloud compute tpus tpu-vm describe "$TPU_NAME" --zone "$ZONE" \
@@ -43,7 +44,7 @@ for ((w=0; w<worker_count; w++)); do
         if [ -n \\\"${WANDB_API_KEY:-}\\\" ]; then export WANDB_MODE=online; else export WANDB_MODE=disabled; fi; \
         source $VENV_DIR/bin/activate; \
         python -m experiments.qwen3_8b_gsm8k_grpo.train \
-          --model_id Qwen/Qwen3-8B-Instruct \
+          --model_id $MODEL_ID \
           --max_train_samples 64 \
           --max_eval_samples 64 \
           --max_prompt_length 256 \
