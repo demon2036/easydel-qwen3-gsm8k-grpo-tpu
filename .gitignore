@@ -1,0 +1,19 @@
+/.venv/
+/venv/
+/__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+
+# Local clone used for reference; not part of this project repo
+/easydel/
+
+# Logs / artifacts
+/runs/
+/outputs/
+/logs/
+*.log
+
