@@ -97,3 +97,38 @@ gcloud compute tpus tpu-vm ssh ... --command "tail -n 50 ~/log.txt"
 - 根因：`vllm-tpu`（jax backend）在 v6e 上采样阶段不稳定（可复现）；且 v6e-8 是 2 host（4+4），MaxText RL 默认按 `trainer_devices_fraction=0.5 sampler_devices_fraction=0.5` 分裂设备会导致 vanilla rollout 的模型 graph/params mesh 不一致；同时 `kv_cache_size` 必须严格大于 prompt+generate 的总步数。
 - 正确做法：smoke test 先强制 `rollout_engine=vanilla`（插件 wrapper `john_plugin_grpo/plugin/scripts/train_rl_with_qwen3_1p7b_hf_patch.py`），并在 config 里设置 `trainer_devices_fraction=1.0` 且 `sampler_devices_fraction=1.0` 让 trainer/sampler 共用同一 mesh；同时保证 `kv_cache_buffer >= max_prefill_predict_length`（例如 `max_prefill_predict_length=128 max_target_length=512 kv_cache_buffer=256`）。
 - 验证方式：日志出现 `Actor Training: ... 10/10` 且末尾 `Done. Outputs at: ...`，并且 `~/qwen3_grpo_<run>.done` 文件存在、输出目录含 `checkpoints/` 与 `tensorboard/`。
+
+- 失败现象：`gcloud compute tpus tpu-vm describe --format="value(networkEndpoints[].ipAddress)"` 得到空，导致脚本算出来 `worker_count=0`，bootstrap/launch 实际没跑任何 worker。
+- 根因：TPU VM 的字段路径是 `networkEndpoints.ipAddress`；且 `wc -l` 统计行数时如果字符串不带换行会得到 0。
+- 正确做法：用 `--format="value(networkEndpoints.ipAddress)"`，并在统计前 `printf "%s\n" "$worker_ips_raw"` 确保有换行。
+- 验证方式：脚本输出 `worker_count=1`（或期望值），且 `--worker=0` 的 bootstrap/launch 命令确实执行。
+
+- 失败现象：TPU VM 上 `python3 -m venv ...` 报 `ensurepip is not available` / 提示安装 `python3.10-venv`。
+- 根因：Ubuntu 默认不带 `python3-venv` 包。
+- 正确做法：后台安装 `sudo apt-get update && sudo apt-get install -y python3-venv`（长任务用 `nohup`），再创建 venv。
+- 验证方式：`python -c "import venv"` 正常、venv 可创建，pip 可用。
+
+- 失败现象：安装 EasyDeL 时报 `Package 'easydel' requires a different Python: 3.10.x not in '<3.14,>=3.11'`。
+- 根因：EasyDeL 需要 Python>=3.11，但 TPU VM 镜像默认 Python3.10。
+- 正确做法：安装 `python3.11`/`python3.11-venv` 并用 `python3.11 -m venv ...` 创建环境。
+- 验证方式：venv 内 `python -V` 为 3.11.x，`python -c "import easydel"` 成功。
+
+- 失败现象：`pip install torch` 在 TPU VM 上拉取巨大的 CUDA 依赖（`nvidia_*_cu12`），浪费磁盘和时间。
+- 根因：PyPI 上的 `torch` 默认 wheel 会带 GPU 依赖；TPU 场景只需要 CPU torch 用于 checkpoint 转换。
+- 正确做法：用 PyTorch CPU index：`pip install --index-url https://download.pytorch.org/whl/cpu torch`。
+- 验证方式：`python -c "import torch; print(torch.__version__)"` 输出带 `+cpu` 后缀，且不再下载 `nvidia_*_cu12`。
+
+- 失败现象：训练脚本传 `wandb_project` 给 `GRPOConfig` 报 `unexpected keyword argument`。
+- 根因：EasyDeL 的 WandB project 名由内部 `wandb.init(project=f\"EasyDeL-...-{model_name}\")` 自动生成；Config 只接受 `wandb_entity`/`wandb_name` 等字段。
+- 正确做法：只设置 `use_wandb=True` + `wandb_entity`/`wandb_name`，并依赖 `WANDB_API_KEY` 环境变量。
+- 验证方式：启动后能正常 `wandb.init(...)` 且日志无 TypeError。
+
+- 失败现象：`GRPOTrainer` 初始化时报 `AttributeError: 'GRPOTrainer' object has no attribute 'padding_value'`。
+- 根因：当前 EasyDeL 版本的 GRPO trainer 里 `create_grain_collect_function` 访问了未初始化的 `padding_value`。
+- 正确做法：在 `GRPOConfig` 设置 `use_data_collactor=False`，并让 trainer 走 purify/stack 路径（我们的数据已固定长度 tokenized）。
+- 验证方式：trainer 能完成配置并进入 generation / metrics 步骤。
+
+- 失败现象：使用 `LINEAR` scheduler 时抛 `ValueError: Linear scheduler requires learning_rate_end`。
+- 根因：eformer 的线性 scheduler 配置要求显式的 `learning_rate_end`。
+- 正确做法：给 `GRPOConfig` 补 `learning_rate_end`（例如 `learning_rate * 0.1`）。
+- 验证方式：`configure Model, Optimizer, Scheduler` 阶段通过，训练开始打 `TrainerMetrics`。
