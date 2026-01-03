@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import time
 import typing as tp
@@ -61,10 +62,11 @@ def main() -> None:
 
     from .gsm8k_reward import gsm8k_correctness_reward, gsm8k_format_reward, parse_gsm8k_gold
 
-    logger = ed.utils.get_logger("qwen3_8b_gsm8k_grpo")
-    logger.info(f"jax_backend={jax.default_backend()}")
-    logger.info(f"jax_process_index={int(os.environ.get('JAX_PROCESS_INDEX', '0'))}")
-    logger.info(f"jax_process_count={int(os.environ.get('JAX_PROCESS_COUNT', '1'))}")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logger = logging.getLogger("qwen3_8b_gsm8k_grpo")
+    logger.info("jax_backend=%s", jax.default_backend())
+    logger.info("jax_process_index=%s", int(os.environ.get("JAX_PROCESS_INDEX", "0")))
+    logger.info("jax_process_count=%s", int(os.environ.get("JAX_PROCESS_COUNT", "1")))
 
     run_name = args.run_name or time.strftime("qwen3_8b_gsm8k_grpo_%Y%m%d_%H%M%S")
     save_directory = os.path.join(args.save_dir, run_name)

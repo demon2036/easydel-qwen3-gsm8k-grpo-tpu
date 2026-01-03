@@ -5,6 +5,8 @@ sentencepiece>=0.2.0
 regex>=2024.0.0
 tqdm>=4.66.0
 
+# EasyDeL often needs CPU `torch` to convert HF torch checkpoints.
+torch>=2.1.0
+
 # EasyDeL from upstream (kept out-of-tree to avoid modifying it)
 easydel[tpu] @ git+https://github.com/erfanzar/EasyDeL.git
-
