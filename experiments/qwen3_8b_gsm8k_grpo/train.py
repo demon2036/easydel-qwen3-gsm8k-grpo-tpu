@@ -35,6 +35,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--total_batch_size", type=int, default=8)
     parser.add_argument("--gradient_accumulation_steps", type=int, default=1)
     parser.add_argument("--learning_rate", type=float, default=1e-6)
+    parser.add_argument("--learning_rate_end", type=float, default=0.0)
     parser.add_argument("--num_train_epochs", type=int, default=1)
     parser.add_argument("--beta", type=float, default=0.04)
     parser.add_argument("--temperature", type=float, default=0.7)
@@ -69,6 +70,7 @@ def main() -> None:
 
     run_name = args.run_name or time.strftime("qwen3_8b_gsm8k_grpo_%Y%m%d_%H%M%S")
     save_directory = os.path.join(args.save_dir, run_name)
+    learning_rate_end = args.learning_rate_end if args.learning_rate_end > 0 else args.learning_rate * 0.1
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_id)
     tokenizer.padding_side = "left"
@@ -134,6 +136,7 @@ def main() -> None:
         max_prompt_length=args.max_prompt_length,
         max_completion_length=args.max_completion_length,
         learning_rate=args.learning_rate,
+        learning_rate_end=learning_rate_end,
         num_train_epochs=args.num_train_epochs,
         optimizer=ed.EasyDeLOptimizers.ADAMW,
         scheduler=ed.EasyDeLSchedulers.LINEAR,
